@@ -1,42 +1,59 @@
 import React, { useState } from 'react';
-import { ChevronLeft, CreditCard, Banknote, CheckCircle, Loader, MapPin, Smartphone, AlertTriangle, MessageCircle } from 'lucide-react';
+import { ChevronLeft, CreditCard, Banknote, CheckCircle, Loader, MapPin, Smartphone, AlertTriangle, MessageCircle, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CheckoutForm({ onBack, cartItems, total, onPlaceOrder, isDarkMode, onGoToChat }) {
   const [formData, setFormData] = useState({ name: '', phone: '', address: '' });
-  const [paymentMethod, setPaymentMethod] = useState('momo');
+  
+  // 'full' = Pay Everything Now | 'delivery' = Pay 20 Now, Rest Later
+  const [paymentType, setPaymentType] = useState('full'); 
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState(null);
+
+  // --- 1. CALCULATE MATH ---
+  // Extract number from string (e.g. "₵150.00" -> 150.00)
+  const numericTotal = parseFloat(total.replace(/[^\d.]/g, ''));
+  const deliveryFee = 20.00;
+  const itemTotal = numericTotal - deliveryFee;
+
+  // What do they pay RIGHT NOW?
+  const amountToPayNow = paymentType === 'full' ? numericTotal : deliveryFee;
+  
+  // What do they pay LATER?
+  const balanceDue = paymentType === 'full' ? 0 : itemTotal;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsProcessing(true);
 
-    // --- FIX IS HERE: We define newId BEFORE the timeout ---
     const newId = Date.now().toString().slice(-4); 
     setOrderId(newId); 
-    // -----------------------------------------------------
 
     setTimeout(() => {
       setIsProcessing(false);
       setIsSuccess(true);
 
       const newOrder = {
-        id: newId, // Now the computer knows what newId is! ✅
+        id: newId, 
         customer: formData,
         items: cartItems,
-        total: total,
+        total: total, // The full value of the cart
+        
+        // 👇 NEW: RECEIPT DATA
         status: 'Pending',
-        paymentMethod: paymentMethod,
+        paymentType: paymentType, // 'full' or 'delivery'
+        amountPaid: `₵${amountToPayNow.toFixed(2)}`,
+        balanceDue: `₵${balanceDue.toFixed(2)}`, // IMPORTANT: Shows what they still owe
         date: new Date().toLocaleDateString()
       };
       
       onPlaceOrder(newOrder); 
-    }, 4500); 
+    }, 3000); 
   };
 
-  // --- DYNAMIC STYLES ---
+  // --- STYLES ---
   const bgMain = isDarkMode ? 'bg-gray-900' : 'bg-gray-50';
   const headerBg = isDarkMode ? 'bg-gray-800 shadow-gray-900' : 'bg-white shadow-sm';
   const textMain = isDarkMode ? 'text-white' : 'text-gray-900';
@@ -53,26 +70,31 @@ export default function CheckoutForm({ onBack, cartItems, total, onPlaceOrder, i
         </motion.div>
         
         <h2 className={`text-2xl font-bold mb-2 ${textMain}`}>Order Placed!</h2>
-        <p className={`mb-8 ${textSub}`}>Order #{orderId}</p>
+        <p className={`mb-6 ${textSub}`}>Order #{orderId}</p>
 
-        {paymentMethod === 'momo' ? (
-          <div className="w-full max-w-sm space-y-3">
-             <p className={`text-sm mb-2 ${textMain}`}>To speed up your delivery, please send a screenshot of your payment to our Support team.</p>
-             <button 
-               onClick={onGoToChat}
-               className="w-full py-4 bg-black text-white rounded-full font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-glow-primary hover:text-black transition-all"
-             >
-               <MessageCircle className="w-5 h-5" />
-               Send Proof in Chat
-             </button>
-             <button onClick={onBack} className="text-sm font-bold text-gray-400 mt-4">Skip</button>
-          </div>
-        ) : (
-          <div className="w-full max-w-sm space-y-3">
-             <p className={`text-sm mb-4 ${textMain}`}>We will call you shortly to confirm your order. Please keep your phone on.</p>
-             <button onClick={onBack} className="w-full py-4 bg-gray-200 text-gray-900 rounded-full font-bold">Back to Shop</button>
-          </div>
-        )}
+        {/* Dynamic Success Message */}
+        <div className={`p-4 rounded-xl mb-6 text-sm ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+           {paymentType === 'full' ? (
+             <p>You have chosen to pay the <strong>Full Amount (₵{amountToPayNow.toFixed(2)})</strong>.</p>
+           ) : (
+             <p>
+               You have chosen to pay the <strong>Delivery Fee (₵20.00)</strong>. <br/>
+               Please prepare <strong>₵{balanceDue.toFixed(2)}</strong> in Cash for the rider.
+             </p>
+           )}
+        </div>
+
+        <div className="w-full max-w-sm space-y-3">
+            <p className={`text-sm mb-2 ${textMain}`}>Please send payment proof to speed up processing.</p>
+            <button 
+              onClick={onGoToChat}
+              className="w-full py-4 bg-black text-white rounded-full font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-glow-primary hover:text-black transition-all"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Send Proof in Chat
+            </button>
+            <button onClick={onBack} className="text-sm font-bold text-gray-400 mt-4">Skip</button>
+        </div>
       </div>
     );
   }
@@ -102,67 +124,85 @@ export default function CheckoutForm({ onBack, cartItems, total, onPlaceOrder, i
           </div>
         </div>
 
-        {/* PAYMENT METHOD */}
+        {/* PAYMENT METHOD SELECTION */}
         <div className={`p-5 rounded-3xl border shadow-sm space-y-4 transition-colors ${cardBg}`}>
           <h3 className={`font-bold flex items-center gap-2 ${textMain}`}>
-            <CreditCard className="w-4 h-4 text-glow-primary" /> Payment Method
+            <Wallet className="w-4 h-4 text-glow-primary" /> Select Payment Plan
           </h3>
           
           <div className="space-y-3">
-            {/* MoMo Option */}
-            <div onClick={() => setPaymentMethod('momo')} className={`p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'momo' ? 'border-yellow-400 bg-yellow-400/10' : `${isDarkMode ? 'border-gray-600' : 'border-gray-100'}`}`}>
+            
+            {/* OPTION 1: FULL PAYMENT */}
+            <div onClick={() => setPaymentType('full')} className={`p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentType === 'full' ? 'border-yellow-400 bg-yellow-400/10' : `${isDarkMode ? 'border-gray-600' : 'border-gray-100'}`}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-yellow-100 text-yellow-600'}`}><Smartphone className="w-5 h-5" /></div>
-                <div><p className={`font-bold text-sm ${textMain}`}>Mobile Money</p><p className="text-xs text-gray-400">Send to 055-xxx-xxxx</p></div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-green-100 text-green-600'}`}><Smartphone className="w-5 h-5" /></div>
+                <div>
+                  <p className={`font-bold text-sm ${textMain}`}>Pay Full Amount</p>
+                  <p className="text-xs text-gray-400">Pay <strong>{total}</strong> via MoMo now</p>
+                </div>
               </div>
-              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'momo' ? 'border-yellow-400' : 'border-gray-300'}`}>{paymentMethod === 'momo' && <div className="w-2 h-2 bg-yellow-400 rounded-full" />}</div>
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentType === 'full' ? 'border-yellow-400' : 'border-gray-300'}`}>{paymentType === 'full' && <div className="w-2 h-2 bg-yellow-400 rounded-full" />}</div>
             </div>
 
-            {/* MOMO INSTRUCTIONS */}
-            {paymentMethod === 'momo' && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl">
-                <p className={`text-xs ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
-                  <strong>Instruction:</strong> Send <strong>{total}</strong> to <strong>055-000-0000 (Beauty)</strong>. Use your name as Reference.
-                </p>
-              </motion.div>
-            )}
-
-            {/* Cash Option */}
-            <div onClick={() => setPaymentMethod('cash')} className={`p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentMethod === 'cash' ? 'border-yellow-400 bg-yellow-400/10' : `${isDarkMode ? 'border-gray-600' : 'border-gray-100'}`}`}>
+            {/* OPTION 2: DELIVERY FEE ONLY */}
+            <div onClick={() => setPaymentType('delivery')} className={`p-4 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${paymentType === 'delivery' ? 'border-yellow-400 bg-yellow-400/10' : `${isDarkMode ? 'border-gray-600' : 'border-gray-100'}`}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-green-100 text-green-600'}`}><Banknote className="w-5 h-5" /></div>
-                <div><p className={`font-bold text-sm ${textMain}`}>Cash on Delivery</p><p className="text-xs text-gray-400">Pay when it arrives</p></div>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-blue-100 text-blue-600'}`}><Banknote className="w-5 h-5" /></div>
+                <div>
+                  <p className={`font-bold text-sm ${textMain}`}>Pay Delivery Fee Only</p>
+                  <p className="text-xs text-gray-400">Pay <strong>₵20.00</strong> now, rest on delivery</p>
+                </div>
               </div>
-              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'cash' ? 'border-yellow-400' : 'border-gray-300'}`}>{paymentMethod === 'cash' && <div className="w-2 h-2 bg-yellow-400 rounded-full" />}</div>
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentType === 'delivery' ? 'border-yellow-400' : 'border-gray-300'}`}>{paymentType === 'delivery' && <div className="w-2 h-2 bg-yellow-400 rounded-full" />}</div>
             </div>
-
-            {/* COD WARNING */}
-            {paymentMethod === 'cash' && (
-               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex gap-3 items-start">
-                  <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                  <p className={`text-xs ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>
-                    <strong>Verification Required:</strong> We will call you to confirm before shipping. Unanswered calls will be cancelled.
-                  </p>
-               </motion.div>
-            )}
 
           </div>
         </div>
 
-        {/* FOOTER */}
-        <div className="flex items-center justify-between pt-4">
-          <span className={`text-gray-400 text-sm`}>Total to Pay</span>
-          <span className={`text-2xl font-bold ${isDarkMode ? 'text-yellow-400' : 'text-gray-900'}`}>{total}</span>
+        {/* INSTRUCTIONS BOX */}
+        <motion.div 
+           key={paymentType} // Re-animate when type changes
+           initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} 
+           className="bg-yellow-500/10 border border-yellow-500/20 p-5 rounded-2xl"
+        >
+            <h4 className={`text-sm font-bold mb-2 ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>Payment Instructions:</h4>
+            
+            <p className={`text-xs mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Please send <strong>₵{amountToPayNow.toFixed(2)}</strong> to our MoMo Number:
+            </p>
+            
+            <div className={`p-3 rounded-lg flex justify-between items-center mb-3 ${isDarkMode ? 'bg-black/40' : 'bg-white'}`}>
+               <span className={`font-mono font-bold text-lg ${textMain}`}>055-000-0000</span>
+               <span className="text-xs text-gray-400 uppercase tracking-wider">Beauty</span>
+            </div>
+
+            {paymentType === 'delivery' && (
+              <div className="flex items-start gap-2 text-xs text-red-400 mt-2">
+                 <AlertTriangle className="w-4 h-4 shrink-0" />
+                 <span><strong>Note:</strong> You must pay the remaining <strong>₵{balanceDue.toFixed(2)}</strong> in Cash to the rider upon delivery.</span>
+              </div>
+            )}
+        </motion.div>
+
+        {/* BOTTOM ACTION BAR */}
+        <div className={`fixed bottom-0 left-0 w-full p-6 pt-4 border-t z-20 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+           <div className="flex justify-between items-center mb-4">
+              <span className="text-gray-400 text-sm">To Pay Now</span>
+              <span className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                 ₵{amountToPayNow.toFixed(2)}
+              </span>
+           </div>
+           
+           <button 
+             disabled={isProcessing}
+             className="w-full py-5 bg-black text-white rounded-full font-bold text-lg shadow-lg flex items-center justify-center gap-3 hover:bg-glow-primary hover:text-black transition-all disabled:opacity-50"
+           >
+             {isProcessing ? <Loader className="w-5 h-5 animate-spin" /> : `Confirm & Pay ₵${amountToPayNow.toFixed(2)}`}
+           </button>
         </div>
 
-        <button 
-          disabled={isProcessing}
-          className="w-full py-5 bg-black text-white rounded-full font-bold text-lg shadow-lg flex items-center justify-center gap-3 hover:bg-glow-primary hover:text-black transition-all disabled:opacity-50"
-        >
-          {isProcessing ? <Loader className="w-5 h-5 animate-spin" /> : "Confirm Order"}
-        </button>
-
       </form>
+      <div className="h-24"></div> {/* Spacer for fixed bottom bar */}
     </div>
   );
 }

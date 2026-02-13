@@ -13,6 +13,11 @@ import OrdersScreen from './components/OrdersScreen';
 import Sidebar from './components/Sidebar';
 import FavoritesScreen from './components/FavoritesScreen';
 
+// 👇 YOUR LOCAL IMAGES
+import serumImg from './assets/products/Serum.png';
+import creamImg from './assets/products/Skincream.png';
+import lipstickImg from './assets/products/Lipstick.png';
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState('welcome');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -40,17 +45,17 @@ function App() {
     return saved ? JSON.parse(saved) : false;
   });
 
-  // --- NEW: PRODUCT MANAGEMENT STATE ---
+  // --- PRODUCT MANAGEMENT (The Brain) ---
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('glow_products');
+    const saved = localStorage.getItem('glow_products_v2');
     if (saved) return JSON.parse(saved);
     
-    // Default Initial Products
+    // 👇 DEFAULT PRODUCTS
     return [
-      { id: 1, name: "Coconut Face Cream", price: "₵85.00", image: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=500", category: "Skincare", stock: 12, description: "Hydrating cream for smooth skin." },
-      { id: 2, name: "Gold Hair Serum", price: "₵120.00", image: "https://images.unsplash.com/photo-1608248597279-f99d160bfbc8?w=500", category: "Hair", stock: 8, description: "Luxury serum for shiny hair." },
-      { id: 3, name: "Matte Lipstick Set", price: "₵150.00", image: "https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=500", category: "Makeup", stock: 20, description: "Long-lasting matte finish." },
-      { id: 4, name: "Pearl Necklace", price: "₵200.00", image: "https://images.unsplash.com/photo-1599643478518-17488fbbcd75?w=500", category: "Accessories", stock: 5, description: "Elegant pearls for any occasion." },
+      { id: 1, name: "Nivea Glow Serum", price: "₵150.00", rating: "4.8", image: serumImg, category: "Skincare", stock: 12, description: "Hydrating serum for a perfect glow." },
+      { id: 2, name: "Coconut Face Cream", price: "₵85.00", rating: "4.5", image: creamImg, category: "Skincare", stock: 8, description: "Smooth coconut cream for daily use." },
+      { id: 3, name: "Matte Red Lipstick", price: "₵120.00", rating: "4.9", image: lipstickImg, category: "Makeup", stock: 20, description: "Bold red matte finish." },
+      { id: 4, name: "Hydrating Serum XL", price: "₵200.00", rating: "4.7", image: serumImg, category: "Skincare", stock: 5, description: "Extra large bottle for long lasting care." },
     ];
   });
 
@@ -59,7 +64,7 @@ function App() {
   useEffect(() => { localStorage.setItem('glow_orders', JSON.stringify(allOrders)); }, [allOrders]);
   useEffect(() => { localStorage.setItem('glow_favorites', JSON.stringify(favorites)); }, [favorites]);
   useEffect(() => { localStorage.setItem('glow_theme', JSON.stringify(isDarkMode)); }, [isDarkMode]);
-  useEffect(() => { localStorage.setItem('glow_products', JSON.stringify(products)); }, [products]); // Save Products!
+  useEffect(() => { localStorage.setItem('glow_products_v2', JSON.stringify(products)); }, [products]);
 
   // --- ACTIONS ---
   const addToCart = (product, quantity) => {
@@ -87,16 +92,19 @@ function App() {
   const handlePlaceOrder = (newOrder) => {
     setAllOrders(prev => [newOrder, ...prev]);
     setCartItems([]);
-    // Removed timeout to allow user to choose navigation
   };
 
   const handleUpdateStatus = (orderId, newStatus) => {
     setAllOrders(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
   };
 
-  // --- NEW: ADD PRODUCT FUNCTION ---
   const handleAddProduct = (newProduct) => {
     setProducts(prev => [newProduct, ...prev]);
+  };
+
+  // 👇 NEW: DELETE FUNCTION (The Power to Remove)
+  const handleDeleteProduct = (productId) => {
+    setProducts(prev => prev.filter(item => item.id !== productId));
   };
 
   const getCartTotal = () => {
@@ -145,7 +153,6 @@ function App() {
           isDarkMode={isDarkMode}
           favorites={favorites} 
           onToggleFavorite={toggleFavorite}
-          // PASS DYNAMIC PRODUCTS
           products={products} 
         />
       )}
@@ -213,9 +220,10 @@ function App() {
           orders={allOrders} 
           onUpdateStatus={handleUpdateStatus} 
           isDarkMode={isDarkMode} 
-          // PASS PRODUCTS & HANDLER
           products={products}
           onAddProduct={handleAddProduct}
+          // 👇 NEW: PASSING THE DELETE FUNCTION HERE
+          onDeleteProduct={handleDeleteProduct}
         />
       )}
 

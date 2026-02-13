@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { ChevronLeft, CheckCircle, Clock, TrendingUp, Package, Phone, CreditCard, Banknote, ChevronDown, ChevronUp, MapPin, Plus, Tag, Image as ImageIcon, Truck, Upload, Star } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Clock, TrendingUp, Package, Phone, CreditCard, Banknote, ChevronDown, ChevronUp, MapPin, Plus, Tag, Image as ImageIcon, Truck, Upload, Star, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import defaultPlaceholder from '../assets/products/Skincream.png'; // ✅ CORRECT
-export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkMode, products = [], onAddProduct }) {
+import defaultPlaceholder from '../assets/products/Skincream.png'; 
+
+// 👇 NEW: Added 'onDeleteProduct' to props
+export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkMode, products = [], onAddProduct, onDeleteProduct }) {
   
   const [activeTab, setActiveTab] = useState('orders');
   const [showAll, setShowAll] = useState(false);
@@ -18,7 +20,7 @@ export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkM
     description: '', 
     image: '', 
     shipping: '20',
-    rating: '5.0' // NEW: Default Rating
+    rating: '5.0' 
   });
 
   const totalRevenue = orders
@@ -47,8 +49,7 @@ export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkM
   const handleSaveProduct = (e) => {
     e.preventDefault();
     if (onAddProduct) {
-       // Use the imported local image variable
-const finalImage = newProduct.image || defaultPlaceholder;
+       const finalImage = newProduct.image || defaultPlaceholder;
        
        onAddProduct({ ...newProduct, image: finalImage, id: Date.now(), price: `₵${newProduct.price}` });
        setIsAdding(false);
@@ -106,7 +107,7 @@ const finalImage = newProduct.image || defaultPlaceholder;
               ) : (
                 displayOrders.map((order) => (
                   <motion.div key={order.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${cardBg} p-5 rounded-3xl shadow-sm border transition-all`}>
-                    {/* ... (Order content remains same as previous) ... */}
+                    
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'}`}>
@@ -137,10 +138,12 @@ const finalImage = newProduct.image || defaultPlaceholder;
                       </div>
                       <div className="mt-2 pt-1 flex items-center gap-2 text-[10px] font-bold text-gray-500">
                         <span>Payment:</span>
-                        {order.paymentMethod === 'momo' ? (
-                           <span className="px-2 py-0.5 rounded bg-yellow-400/20 text-yellow-600 flex items-center gap-1 border border-yellow-400/30"><CreditCard className="w-3 h-3" /> MoMo</span>
+                        {order.paymentType === 'full' ? (
+                           <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-600 flex items-center gap-1 border border-green-500/30"><CheckCircle className="w-3 h-3" /> Paid Full</span>
+                        ) : order.paymentType === 'delivery' ? (
+                           <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-600 flex items-center gap-1 border border-blue-500/30"><Truck className="w-3 h-3" /> COD (Paid 20)</span>
                         ) : (
-                           <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-600 flex items-center gap-1 border border-green-500/30"><Banknote className="w-3 h-3" /> Cash</span>
+                           <span className="px-2 py-0.5 rounded bg-yellow-400/20 text-yellow-600 flex items-center gap-1 border border-yellow-400/30"><Clock className="w-3 h-3" /> Pending</span>
                         )}
                       </div>
                     </div>
@@ -179,10 +182,22 @@ const finalImage = newProduct.image || defaultPlaceholder;
                        {product.stock} left
                     </span>
 
-                    {/* RATING BADGE (NEW!) */}
+                    {/* RATING BADGE */}
                     <span className="absolute top-3 left-3 bg-yellow-400/90 text-black px-2 py-1 rounded-full text-[10px] font-bold backdrop-blur-sm flex items-center gap-1">
                        <Star className="w-3 h-3 fill-black" /> {product.rating || '4.5'}
                     </span>
+
+                    {/* 👇 NEW: DELETE BUTTON */}
+                    <button 
+                       onClick={() => {
+                          if(window.confirm('Are you sure you want to delete this item?')) {
+                             onDeleteProduct(product.id);
+                          }
+                       }}
+                       className="absolute bottom-3 right-3 p-2 bg-red-500/10 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-colors"
+                    >
+                       <Trash2 className="w-4 h-4" />
+                    </button>
 
                     <h4 className={`font-bold text-sm mb-1 truncate ${textMain}`}>{product.name}</h4>
                     <p className="text-xs text-gray-400 mb-2">{product.category}</p>

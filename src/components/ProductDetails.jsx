@@ -43,13 +43,15 @@ export default function ProductDetails({ onBack, product, onAddToCart, isFavorit
       </div>
 
       {/* HERO IMAGE SECTION */}
-      <div className={`flex-1 flex items-center justify-center relative overflow-hidden pb-20 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      {/* 👇 CHANGED: Fixed height to 45% of screen (h-[45vh]) to control size */}
+      <div className={`flex-1 h-[45vh] flex items-center justify-center relative overflow-hidden pb-10 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="absolute w-96 h-96 bg-yellow-400 rounded-full mix-blend-multiply filter blur-[80px] opacity-20 animate-pulse"></div>
         
+        {/* 👇 CHANGED: Removed w-64, added h-64 and object-contain to make it fit nicely */}
         <motion.img 
           src={product.image} 
           alt={product.name} 
-          className="relative z-10 w-64 h-auto drop-shadow-2xl"
+          className="relative z-10 h-64 w-auto object-contain drop-shadow-2xl"
           initial={{ opacity: 0, y: 50, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
@@ -57,7 +59,7 @@ export default function ProductDetails({ onBack, product, onAddToCart, isFavorit
       </div>
 
       {/* DETAILS PANEL */}
-      <div className={`rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] p-8 -mt-10 z-20 relative transition-colors duration-300 ${bgCard}`}>
+      <div className={`rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] p-8 -mt-10 z-20 relative transition-colors duration-300 flex-1 ${bgCard}`}>
         
         <div className="flex justify-between items-start mb-2">
           <div>
@@ -76,12 +78,12 @@ export default function ProductDetails({ onBack, product, onAddToCart, isFavorit
         <div className="mt-6 mb-8">
           <h3 className={`text-sm font-bold mb-2 ${textMain}`}>Description</h3>
           <p className={`${textSub} text-sm leading-relaxed`}>
-            Experience the luxury of {product.name}. This premium formula is designed to give you that signature Glow Empire radiance. Perfect for daily use.
+            {product.description || `Experience the luxury of ${product.name}. This premium formula is designed to give you that signature Glow Empire radiance. Perfect for daily use.`}
           </p>
         </div>
 
         {/* Quantity & Cart Buttons */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-5 mt-auto">
           <div className={`flex items-center gap-4 border rounded-full px-4 py-3 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <button 
               onClick={() => quantity > 1 && setQuantity(q => q - 1)}
