@@ -2,26 +2,17 @@ import React, { useState } from 'react';
 import { Search, ShoppingBag, AlignLeft, Filter, Star, Plus, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-import serumImg from '../assets/products/Serum.png';
-import creamImg from '../assets/products/Skincream.png';
-import lipstickImg from '../assets/products/Lipstick.png';
-
-// NEW: Added 'isDarkMode' to the props list
-export default function ShopHome({ onProductClick, onCartClick, cartCount, onAddToCart, onChatClick, onMenuClick, isDarkMode }) {
+// NEW: Added 'products' to the props list 👇
+export default function ShopHome({ onProductClick, onCartClick, cartCount, onAddToCart, onChatClick, onMenuClick, isDarkMode, products = [] }) {
   const [activeCategory, setActiveCategory] = useState("All");
-  const categories = ["All", "Skin Care", "Make Up", "Hair", "Perfume", "Eyes"];
+  const categories = ["All", "Skincare", "Makeup", "Hair", "Perfume", "Eye", "Accessories"];
 
-  const allProducts = [
-    { id: 1, name: "Nivea Glow Serum", price: "₵150.00", rating: "4.8", image: serumImg, category: "Skin Care" },
-    { id: 2, name: "Coconut Face Cream", price: "₵85.00", rating: "4.5", image: creamImg, category: "Skin Care" },
-    { id: 3, name: "Matte Red Lipstick", price: "₵120.00", rating: "4.9", image: lipstickImg, category: "Make Up" },
-    { id: 4, name: "Hydrating Serum", price: "₵200.00", rating: "4.7", image: serumImg, category: "Skin Care" }
-  ];
-
-  const filteredProducts = activeCategory === "All" ? allProducts : allProducts.filter(product => product.category === activeCategory);
+  // 1. FILTER LOGIC (Now using the REAL 'products' list from App.jsx)
+  const filteredProducts = activeCategory === "All" 
+    ? products 
+    : products.filter(product => product.category === activeCategory);
 
   // --- DYNAMIC THEME COLORS ---
-  // These variables switch colors based on Dark Mode
   const bgMain = isDarkMode ? 'bg-gray-900' : 'bg-gray-100';
   const bgCard = isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-yellow-400';
   const textMain = isDarkMode ? 'text-white' : 'text-gray-900';
@@ -119,16 +110,19 @@ export default function ShopHome({ onProductClick, onCartClick, cartCount, onAdd
                 key={product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} onClick={() => onProductClick(product)}
                 className={`p-4 rounded-3xl shadow-sm hover:shadow-xl transition-all relative border cursor-pointer group ${bgCard}`}
               >
-                <div className="h-32 flex items-center justify-center mb-4 relative">
-                  <img src={product.image} alt={product.name} className="h-full w-auto object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300" />
+                <div className="h-32 flex items-center justify-center mb-4 relative overflow-hidden rounded-xl">
+                  {/* CHANGED: Using standard img tag with object-cover for user uploads */}
+                  <img src={product.image} alt={product.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                 </div>
+                
                 <div className="space-y-1">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-xs text-gray-400 font-medium">{product.rating}</span>
+                    <span className="text-xs text-gray-400 font-medium">{product.rating || '4.5'}</span>
                   </div>
                   <h4 className={`font-bold text-sm leading-tight line-clamp-2 ${textMain}`}>{product.name}</h4>
                   <p className={`text-xs ${textSub}`}>{product.category}</p>
+                  
                   <div className="flex justify-between items-center pt-2">
                     <span className={`font-bold text-lg ${textMain}`}>{product.price}</span>
                     <motion.button whileTap={{ scale: 0.8 }} onClick={(e) => { e.stopPropagation(); onAddToCart(product, 1); }}
@@ -146,4 +140,4 @@ export default function ShopHome({ onProductClick, onCartClick, cartCount, onAdd
 
     </div>
   );
-} 
+}
