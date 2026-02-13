@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  /* The Vivid Amber-Yellow for primary actions */
+  --color-glow-primary: #FFB800; 
+  
+  /* PURE WHITE for that clean, premium beauty look */
+  --color-glow-bg: #FFFFFF;
+  
+  /* A very light grey for inputs or secondary cards */
+  --color-glow-surface: #F9F9F9;
+  
+  --color-glow-dark: #1C1C1E;
+  --radius-2xl: 2rem;
+}
+
+body {
+  background-color: var(--color-glow-bg);
+  color: var(--color-glow-dark);
+  font-family: sans-serif;
+}
