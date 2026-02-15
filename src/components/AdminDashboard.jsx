@@ -1,26 +1,29 @@
 import React, { useState, useRef } from 'react';
-import { ChevronLeft, CheckCircle, Clock, TrendingUp, Package, Phone, CreditCard, Banknote, ChevronDown, ChevronUp, MapPin, Plus, Tag, Image as ImageIcon, Truck, Upload, Star, Trash2 } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Clock, TrendingUp, Package, Phone, CreditCard, Banknote, ChevronDown, ChevronUp, MapPin, Plus, Tag, Image as ImageIcon, Truck, Upload, Star, Trash2, LogOut } from 'lucide-react'; 
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../supabaseClient'; 
 import defaultPlaceholder from '../assets/products/Skincream.png'; 
 
-// 👇 NEW: Added 'onDeleteProduct' to props
 export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkMode, products = [], onAddProduct, onDeleteProduct }) {
   
   const [activeTab, setActiveTab] = useState('orders');
   const [showAll, setShowAll] = useState(false);
   const fileInputRef = useRef(null); 
+  const [uploading, setUploading] = useState(false); // ⏳ TRACK UPLOAD STATUS
+
+  // 🚪 LOGOUT LOGIC
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    onBack(); 
+  };
 
   // INVENTORY FORM STATE
   const [isAdding, setIsAdding] = useState(false);
   const [newProduct, setNewProduct] = useState({
-    name: '', 
-    category: 'Skincare', 
-    price: '', 
-    stock: '10', 
-    description: '', 
-    image: '', 
-    shipping: '20',
-    rating: '5.0' 
+    name: '', category: 'Skincare', price: '', stock: '10', 
+    description: '', image: null, // Now stores the FILE object
+    preview: '', // Local preview URL
+    shipping: '20', rating: '5.0' 
   });
 
   const totalRevenue = orders
@@ -35,26 +38,60 @@ export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkM
   const LIMIT = 2; 
   const displayOrders = showAll ? orders : orders.slice(0, LIMIT);
 
-  const handleImageUpload = (e) => {
+  // 📸 NEW: Handles File Selection & Preview
+  const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewProduct({ ...newProduct, image: reader.result }); 
-      };
-      reader.readAsDataURL(file);
+      // Create a local preview so you see it instantly
+      const previewUrl = URL.createObjectURL(file);
+      setNewProduct({ ...newProduct, image: file, preview: previewUrl }); 
     }
   };
 
-  const handleSaveProduct = (e) => {
+  // 💾 NEW: Uploads to Cloud then Saves to DB
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
-    if (onAddProduct) {
-       const finalImage = newProduct.image || defaultPlaceholder;
-       
-       onAddProduct({ ...newProduct, image: finalImage, id: Date.now(), price: `₵${newProduct.price}` });
-       setIsAdding(false);
-       setNewProduct({ name: '', category: 'Skincare', price: '', stock: '10', description: '', image: '', shipping: '20', rating: '5.0' });
+    if (!onAddProduct) return;
+    
+    setUploading(true); // Start loading spinner
+
+    let finalImageUrl = defaultPlaceholder;
+
+    // 1. 🌩️ UPLOAD TO SUPABASE STORAGE
+    if (newProduct.image && typeof newProduct.image !== 'string') {
+      const fileName = `${Date.now()}_${newProduct.image.name.replace(/\s/g, '_')}`;
+      
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, newProduct.image);
+
+      if (error) {
+        console.error("Upload Error:", error);
+        alert("Failed to upload image!");
+        setUploading(false);
+        return;
+      }
+
+      // 2. 🔗 GET PUBLIC URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+        
+      finalImageUrl = publicUrl;
     }
+
+    // 3. 💾 SAVE TO DATABASE
+    await onAddProduct({ 
+        ...newProduct, 
+        image: finalImageUrl, // Use the real cloud link
+        id: Date.now(), 
+        price: `₵${newProduct.price}` 
+    });
+
+    setUploading(false); // Stop loading
+    setIsAdding(false);
+    // Reset form
+    setNewProduct({ name: '', category: 'Skincare', price: '', stock: '10', description: '', image: null, preview: '', shipping: '20', rating: '5.0' });
   };
 
   return (
@@ -70,8 +107,12 @@ export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkM
           </button>
           <div className="flex-1">
              <h1 className="text-xl font-bold text-white">CEO Dashboard</h1>
-             <p className="text-xs text-white/50">Welcome back, Beauty</p>
+             <p className="text-xs text-white/50">Welcome back, Boss</p>
           </div>
+          
+          <button onClick={handleLogout} className="p-2 bg-red-500/20 rounded-full text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/30 backdrop-blur-md">
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
         
         {/* REVENUE */}
@@ -187,7 +228,7 @@ export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkM
                        <Star className="w-3 h-3 fill-black" /> {product.rating || '4.5'}
                     </span>
 
-                    {/* 👇 NEW: DELETE BUTTON */}
+                    {/* DELETE BUTTON */}
                     <button 
                        onClick={() => {
                           if(window.confirm('Are you sure you want to delete this item?')) {
@@ -225,11 +266,11 @@ export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkM
                    {/* UPLOAD IMAGE */}
                    <div>
                       <label className="text-xs font-bold text-gray-500 ml-2">Product Image</label>
-                      <input type="file" ref={fileInputRef} accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      <input type="file" ref={fileInputRef} accept="image/*" onChange={handleImageSelect} className="hidden" />
                       <div onClick={() => fileInputRef.current.click()} className={`w-full h-32 rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer overflow-hidden relative transition-all ${isDarkMode ? 'border-gray-600 hover:border-glow-primary hover:bg-gray-800' : 'border-gray-300 hover:border-black hover:bg-gray-50'}`}>
-                         {newProduct.image ? (
+                         {newProduct.preview ? (
                            <>
-                             <img src={newProduct.image} alt="Preview" className="w-full h-full object-cover" />
+                             <img src={newProduct.preview} alt="Preview" className="w-full h-full object-cover" />
                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><span className="text-white text-xs font-bold">Change Image</span></div>
                            </>
                          ) : (
@@ -286,7 +327,10 @@ export default function AdminDashboard({ onBack, orders, onUpdateStatus, isDarkM
                    {/* Buttons */}
                    <div className="flex gap-3 pt-4">
                       <button type="button" onClick={() => setIsAdding(false)} className="flex-1 py-4 font-bold text-gray-500 bg-gray-100 rounded-2xl hover:bg-gray-200 text-sm">Cancel</button>
-                      <button type="submit" className="flex-1 py-4 font-bold text-black bg-glow-primary rounded-2xl hover:scale-105 transition-transform shadow-lg text-sm">Save Item</button>
+                      
+                      <button disabled={uploading} type="submit" className="flex-1 py-4 font-bold text-black bg-glow-primary rounded-2xl hover:scale-105 transition-transform shadow-lg text-sm flex justify-center items-center gap-2">
+                        {uploading ? 'Uploading...' : 'Save Item'}
+                      </button>
                    </div>
 
                 </form>
